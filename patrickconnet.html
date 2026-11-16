@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patrick Shop Business Manager</title>
+<style>
+:root{--navy:#17324d;--blue:#2463a6;--bg:#f1f4f8;--red:#b42318;--green:#16803c}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:#222}
+header{background:var(--navy);color:white;padding:18px;text-align:center}header h1{margin:0 0 6px;font-size:clamp(20px,4vw,28px)}
+nav{background:var(--blue);padding:10px;display:flex;gap:7px;flex-wrap:wrap;justify-content:center}
+button{cursor:pointer;border:0;border-radius:6px;padding:10px 13px;font-weight:700}nav button{background:white;color:var(--navy)}nav button.active{background:#dceaff}
+main{max-width:1100px;margin:auto;padding:16px}section.page{display:none}section.page.active{display:block}
+.card{background:white;padding:17px;margin:12px 0;border-radius:9px;box-shadow:0 2px 6px #0001}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}.metric{font-size:24px;font-weight:bold;color:var(--navy);margin-top:8px}
+h2,h3{color:var(--navy)}label{display:block;font-weight:bold;margin:10px 0 5px}
+input,select{width:100%;padding:11px;border:1px solid #bbb;border-radius:6px;margin-bottom:9px;font:inherit}
+.action{background:var(--blue);color:white}.danger{background:var(--red);color:white}.muted{color:#666;font-size:13px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:650px}th,td{text-align:left;padding:10px;border-bottom:1px solid #ddd}th{background:#e4edf7}
+.pill{display:inline-block;padding:4px 8px;border-radius:20px;background:#fff0d6;color:#855400;font-size:12px}
+.success{color:var(--green)}.error{color:var(--red)}#auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:18px;background:var(--navy)}
+.authbox{background:white;border-radius:12px;padding:25px;width:100%;max-width:440px}.authbox h2{text-align:center}.authbox button{width:100%;margin-top:7px}
+.hidden{display:none!important}.actions{display:flex;gap:7px;flex-wrap:wrap}.notice{background:#fff7df;border-left:4px solid #d69b22;padding:12px;border-radius:5px}
+@media(max-width:600px){main{padding:9px}.card{padding:13px}nav button{flex:1 1 40%}}
+</style>
+</head>
+<body>
+<div id="auth"><div class="authbox">
+<h2>PATRICK SHOP BUSINESS MANAGER</h2>
+<p class="muted" style="text-align:center">Hosted version — create your business account</p>
+<div id="signupBox">
+<h3>Create account</h3>
+<label>Business name</label><input id="regBusiness" placeholder="e.g. Patrick Shop">
+<label>Your full name</label><input id="regName" placeholder="Your name">
+<label>Email address</label><input id="regEmail" type="email" autocomplete="email" placeholder="you@example.com">
+<label>Password</label><input id="regPass" type="password" autocomplete="new-password" placeholder="At least 8 characters">
+<button class="action" onclick="register()">Create account</button>
+<p class="muted">Already registered? <a href="#" onclick="showAuth('login');return false">Sign in</a></p>
+</div>
+<div id="loginBox" class="hidden">
+<h3>Sign in</h3>
+<label>Email address</label><input id="loginEmail" type="email" autocomplete="email">
+<label>Password</label><input id="loginPass" type="password" autocomplete="current-password">
+<button class="action" onclick="login()">Sign in</button>
+<p class="muted">New here? <a href="#" onclick="showAuth('signup');return false">Create an account</a></p>
+</div>
+<p id="authMessage" aria-live="polite"></p>
+</div></div>
+<div id="app" class="hidden">
+<header><h1 id="businessHeading">PATRICK SHOP BUSINESS MANAGER</h1><div id="welcome"></div></header>
+<nav>
+<button class="active" onclick="showPage('dashboard',this)">Dashboard</button><button onclick="showPage('stock',this)">Stock</button>
+<button onclick="showPage('sales',this)">Sales</button><button onclick="showPage('debts',this)">Customer debts</button>
+<button onclick="showPage('expenses',this)">Expenses</button><button onclick="showPage('reports',this)">Reports</button>
+<button onclick="showPage('guide',this)">User guide</button><button onclick="logout()">Log out</button>
+</nav>
+<main>
+<section id="dashboard" class="page active"><h2>Business dashboard</h2><div class="cards">
+<div class="card">Total sales<div class="metric" id="mSales">GH₵0.00</div></div><div class="card">Money received<div class="metric" id="mPaid">GH₵0.00</div></div>
+<div class="card">Outstanding debts<div class="metric" id="mDebt">GH₵0.00</div></div><div class="card">Gross profit<div class="metric" id="mProfit">GH₵0.00</div></div>
+<div class="card">Expenses<div class="metric" id="mExpenses">GH₵0.00</div></div><div class="card">Net profit<div class="metric" id="mNet">GH₵0.00</div></div>
+</div><div class="card"><h3>Overdue payment reminders</h3><div id="dashboardReminders">No overdue reminders.</div></div>
+<div class="notice">Your records are stored in your Supabase business account. SMS and WhatsApp messages are not yet sent automatically.</div></section>
+
+<section id="stock" class="page"><div class="card"><h2 id="productFormTitle">Add product to stock</h2><input type="hidden" id="editProductId">
+<label>Product name</label><input id="pName" placeholder="Enter product name">
+<div class="row"><div><label>Quantity</label><input id="pQty" type="number" min="0" step="1"></div><div><label>Wholesale cost per item (GH₵)</label><input id="pCost" type="number" min="0" step="0.01"></div>
+<div><label>Selling price per item (GH₵)</label><input id="pPrice" type="number" min="0" step="0.01"></div><div><label>Low-stock alert level</label><input id="pAlert" type="number" min="0" step="1" value="2"></div></div>
+<div class="actions"><button class="action" onclick="saveProduct()">Save product</button><button onclick="clearProductForm()">Clear</button></div></div>
+<div class="card"><h2>Available stock</h2><div class="table-wrap"><table><thead><tr><th>Product</th><th>Qty</th><th>Cost</th><th>Selling price</th><th>Stock value</th><th>Actions</th></tr></thead><tbody id="stockRows"></tbody></table></div></div></section>
+
+<section id="sales" class="page"><div class="card"><h2>Record a sale</h2><div class="row"><div><label>Date</label><input type="date" id="sDate"></div>
+<div><label>Customer name</label><input id="sCustomer" placeholder="Customer name (or Walk-in)"></div><div><label>Customer phone</label><input id="sPhone" placeholder="e.g. 0241234567"></div></div>
+<label>Product</label><select id="sProduct"><option value="">Select a product</option></select>
+<div class="row"><div><label>Quantity sold</label><input type="number" id="sQty" min="1" value="1"></div><div><label>Selling price per item (GH₵)</label><input type="number" id="sPrice" min="0" step="0.01"></div><div><label>Amount paid (GH₵)</label><input type="number" id="sPaid" min="0" step="0.01" value="0"></div></div>
+<button class="action" onclick="recordSale()">Record sale</button><p class="muted">Unpaid balances are tracked as customer debts. A reminder becomes due 3 days after the sale.</p></div>
+<div class="card"><h2>Sales history</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Customer</th><th>Product</th><th>Qty</th><th>Total</th><th>Paid</th><th>Balance</th><th>Receipt</th></tr></thead><tbody id="salesRows"></tbody></table></div></div></section>
+
+<section id="debts" class="page"><div class="card"><h2>Customer debts and reminders</h2><p class="muted">After 3 days, use WhatsApp or SMS to prepare a message. The message must still be reviewed and sent by you. Automatic sending will be configured later.</p><div id="debtRows"></div></div></section>
+<section id="expenses" class="page"><div class="card"><h2>Record an expense</h2><div class="row"><div><label>Date</label><input type="date" id="eDate"></div><div><label>Description</label><input id="eDesc" placeholder="e.g. Transport"></div><div><label>Category</label><select id="eCategory"><option>Transport</option><option>Packaging</option><option>Delivery</option><option>Rent</option><option>Utilities</option><option>Other</option></select></div><div><label>Amount (GH₵)</label><input type="number" id="eAmount" min="0.01" step="0.01"></div></div><button class="action" onclick="addExpense()">Save expense</button></div>
+<div class="card"><h2>Expense history</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th>Action</th></tr></thead><tbody id="expenseRows"></tbody></table></div></div></section>
+<section id="reports" class="page"><div class="card"><h2>Business report</h2><label>Report period</label><select id="rPeriod"><option value="day">Today</option><option value="month">This month</option><option value="all">All records</option></select><button class="action" onclick="makeReport()">Generate report</button><div id="reportOutput"></div></div></section>
+<section id="guide" class="page"><div class="card"><h2>Patrick Shop Business Manager — User guide</h2>
+<h3>1. Create an account</h3><p>Register with your business name, full name, email address and password. Use the same email to sign in later.</p>
+<h3>2. Add stock</h3><p>Open Stock, enter product name, quantity, wholesale cost, selling price and low-stock alert level, then save.</p>
+<h3>3. Record a sale</h3><p>Select a product, enter quantity, customer details, price and amount received. Stock is reduced and any remaining balance is recorded as a debt.</p>
+<h3>4. Collect a debt</h3><p>Open Customer debts and select Receive payment. The balance will be updated.</p>
+<h3>5. Send a reminder</h3><p>After three days, an unpaid balance is marked as due. Select WhatsApp or SMS to prepare a message. Automatic sending is a later setup stage.</p>
+<h3>6. Expenses and reports</h3><p>Record expenses and use Reports to view sales, receipts, debts, gross profit and net profit.</p>
+<h3>7. Account security</h3><p>Sign out when using a shared computer. Each account is restricted by database security rules to its own business records.</p>
+</div></section>
+</main></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = "https://ytpyvncdyylimhxvzoqv.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Q0niN9yAH-yklIsfd78krA_-amyg9Tb";
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+let user=null, business=null, products=[], sales=[], expenses=[], payments=[];
+const $=id=>document.getElementById(id);
+const money=n=>'GH₵'+Number(n||0).toFixed(2);
+const today=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
+function msg(t,ok=false){$('authMessage').textContent=t;$('authMessage').className=ok?'success':'error'}
+function showAuth(which){$('signupBox').classList.toggle('hidden',which!=='signup');$('loginBox').classList.toggle('hidden',which!=='login');msg('')}
+function showPage(id,btn){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');refresh()}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function ownerId(){return business.id}
+async function register(){
+ const businessName=$('regBusiness').value.trim(),name=$('regName').value.trim(),email=$('regEmail').value.trim(),password=$('regPass').value;
+ if(!businessName||!name||!email||password.length<8){msg('Complete all fields. Password must contain at least 8 characters.');return}
+ const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name:name,business_name:businessName}}});
+ if(error){msg(error.message);return}
+ if(!data.session){msg('Registration received. Check your email to confirm your account, then return here and sign in.',true);showAuth('login');return}
+ user=data.user;await ensureBusiness();await loadApp();
+}
+async function login(){
+ const email=$('loginEmail').value.trim(),password=$('loginPass').value;
+ const {data,error}=await db.auth.signInWithPassword({email,password});
+ if(error){msg(error.message);return}user=data.user;await ensureBusiness();await loadApp();
+}
+async function ensureBusiness(){
+ const {data:rows,error}=await db.from('businesses').select('*').eq('owner_id',user.id).limit(1);
+ if(error)throw error;
+ if(rows&&rows.length){business=rows[0];return}
+ const name=user.user_metadata?.business_name||'My Business';
+ const {data:created,error:e}=await db.from('businesses').insert({owner_id:user.id,business_name:name}).select().single();
+ if(e)throw e;business=created;
+}
+async function loadApp(){
+ try{
+ await ensureBusiness();
+ $('auth').classList.add('hidden');$('app').classList.remove('hidden');
+ $('businessHeading').textContent=business.business_name.toUpperCase()+' — BUSINESS MANAGER';
+ $('welcome').textContent='Welcome, '+(user.user_metadata?.full_name||user.email);
+ $('sDate').value=today();$('eDate').value=today();
+ await refresh();
+ }catch(e){$('app').classList.add('hidden');$('auth').classList.remove('hidden');msg('Could not load your business: '+e.message)}
+}
+async function logout(){await db.auth.signOut();user=null;business=null;products=[];sales=[];expenses=[];payments=[];$('app').classList.add('hidden');$('auth').classList.remove('hidden');showAuth('login')}
+async function loadData(){
+ const bid=ownerId();
+ const results=await Promise.all([
+ db.from('products').select('*').eq('business_id',bid).order('created_at',{ascending:true}),
+ db.from('sales').select('*, customers(customer_name)').eq('business_id',bid).order('sale_date',{ascending:false}),
+ db.from('sale_items').select('*').eq('business_id',bid),
+ db.from('payments').select('*').eq('business_id',bid),
+ db.from('expenses').select('*').eq('business_id',bid).order('expense_date',{ascending:false})
+ ]);
+ for(const r of results)if(r.error)throw r.error;
+ products=results[0].data||[];sales=results[1].data||[];window.saleItems=results[2].data||[];payments=results[3].data||[];expenses=results[4].data||[];
+}
+async function refresh(){if(!business)return;try{await loadData();render()}catch(e){alert('Could not load records: '+e.message)}}
+function paidFor(s){return payments.filter(p=>p.sale_id===s.id).reduce((a,p)=>a+Number(p.amount),0)}
+function totalCost(s){return (window.saleItems||[]).filter(i=>i.sale_id===s.id).reduce((a,i)=>a+Number(i.unit_cost)*Number(i.quantity),0)}
+function balance(s){return Math.max(0,Number(s.total_amount)-paidFor(s))}
+function saleDate(s){return s.sale_date||s.created_at.slice(0,10)}
+function overdue(s){if(balance(s)<=0)return false;const d=new Date(saleDate(s)+'T00:00:00');d.setDate(d.getDate()+3);return new Date()>=d}
+async function saveProduct(){
+ const id=$('editProductId').value,name=$('pName').value.trim(),quantity=Number($('pQty').value),cost=Number($('pCost').value),price=Number($('pPrice').value),alertLevel=Number($('pAlert').value);
+ if(!name||!Number.isInteger(quantity)||quantity<0||cost<0||price<0||!Number.isInteger(alertLevel)||alertLevel<0){alert('Enter valid product details.');return}
+ const row={business_id:ownerId(),product_name:name,quantity,cost_price:cost,selling_price:price,alert_level:alertLevel};
+ let result=id?await db.from('products').update(row).eq('id',id).eq('business_id',ownerId()):await db.from('products').insert(row);
+ if(result.error){alert(result.error.message);return}clearProductForm();await refresh();alert('Product saved.');
+}
+function clearProductForm(){$('editProductId').value='';$('productFormTitle').textContent='Add product to stock';['pName','pQty','pCost','pPrice'].forEach(x=>$(x).value='');$('pAlert').value=2}
+function editProduct(id){const p=products.find(x=>x.id===id);if(!p)return;$('editProductId').value=id;$('productFormTitle').textContent='Edit product';$('pName').value=p.product_name;$('pQty').value=p.quantity;$('pCost').value=p.cost_price;$('pPrice').value=p.selling_price;$('pAlert').value=p.alert_level??2;window.scrollTo({top:0,behavior:'smooth'})}
+async function deleteProduct(id){if(!confirm('Delete this product?'))return;const {error}=await db.from('products').delete().eq('id',id).eq('business_id',ownerId());if(error){alert('Could not delete product: '+error.message);return}await refresh()}
+async function recordSale(){
+ const p=products.find(x=>x.id===$('sProduct').value),qty=Number($('sQty').value),price=Number($('sPrice').value),paid=Number($('sPaid').value),date=$('sDate').value,customer=$('sCustomer').value.trim()||'Walk-in',phone=$('sPhone').value.trim();
+ if(!p||!date||!Number.isInteger(qty)||qty<1||qty>p.quantity||price<=0||paid<0){alert('Check product, quantity, date, price and amount paid.');return}
+ const total=qty*price;if(paid>total){alert('Amount paid cannot exceed the sale total.');return}
+ // Create or reuse a customer record when a name is provided.
+ let customerId=null;
+ if(customer!=='Walk-in'){let q=await db.from('customers').select('id').eq('business_id',ownerId()).eq('customer_name',customer).limit(1);if(q.error){alert(q.error.message);return}
+ if(q.data.length){customerId=q.data[0].id;await db.from('customers').update({phone}).eq('id',customerId)}
+ else{let c=await db.from('customers').insert({business_id:ownerId(),customer_name:customer,phone}).select().single();if(c.error){alert(c.error.message);return}customerId=c.data.id}}
+ const sale=await db.from('sales').insert({business_id:ownerId(),customer_id:customerId,total_amount:total,sale_date:date,customer_phone:phone}).select().single();
+ if(sale.error){alert(sale.error.message);return}
+ const item=await db.from('sale_items').insert({business_id:ownerId(),sale_id:sale.data.id,product_id:p.id,product_name:p.product_name,quantity:qty,unit_cost:p.cost_price,unit_price:price,line_total:total});
+ if(item.error){await db.from('sales').delete().eq('id',sale.data.id);alert(item.error.message);return}
+ if(paid>0){const pay=await db.from('payments').insert({business_id:ownerId(),sale_id:sale.data.id,amount:paid,payment_method:'Cash'});if(pay.error){alert('Sale saved, but payment could not be recorded: '+pay.error.message);return}}
+ const upd=await db.from('products').update({quantity:p.quantity-qty}).eq('id',p.id).eq('business_id',ownerId());
+ if(upd.error){alert('Sale saved, but stock update failed. Please contact support before recording another sale. '+upd.error.message);return}
+ $('sCustomer').value='';$('sPhone').value='';$('sQty').value=1;$('sPaid').value=0;await refresh();alert('Sale recorded successfully.');
+}
+async function receivePayment(id){const s=sales.find(x=>x.id===id);if(!s)return;const bal=balance(s),v=prompt('Outstanding balance: '+money(bal)+'\\nEnter payment received:');if(v===null)return;const n=Number(v);if(!Number.isFinite(n)||n<=0||n>bal){alert('Enter a valid payment amount.');return}
+ const {error}=await db.from('payments').insert({business_id:ownerId(),sale_id:id,amount:n,payment_method:'Cash'});if(error){alert(error.message);return}await refresh()}
+function reminderText(s){const item=(window.saleItems||[]).find(i=>i.sale_id===s.id);return `Hello, this is a friendly reminder from ${business.business_name} that your outstanding balance is ${money(balance(s))} for your purchase on ${saleDate(s)}. Kindly make payment. Thank you.`}
+function phoneForLink(phone){let p=String(phone||'').replace(/\\D/g,'');if(p.startsWith('0'))p='233'+p.slice(1);return p}
+function sendWhatsApp(id){const s=sales.find(x=>x.id===id);if(!s?.customer_phone){alert('No customer phone number was saved.');return}window.open('https://wa.me/'+phoneForLink(s.customer_phone)+'?text='+encodeURIComponent(reminderText(s)),'_blank')}
+function sendSMS(id){const s=sales.find(x=>x.id===id);if(!s?.customer_phone){alert('No customer phone number was saved.');return}location.href='sms:'+s.customer_phone+'?body='+encodeURIComponent(reminderText(s))}
+async function addExpense(){const date=$('eDate').value,description=$('eDesc').value.trim(),amount=Number($('eAmount').value),category=$('eCategory').value;if(!date||!description||amount<=0){alert('Enter valid expense details.');return}
+ const {error}=await db.from('expenses').insert({business_id:ownerId(),expense_name:description,amount,expense_date:date});if(error){alert(error.message);return}$('eDesc').value='';$('eAmount').value='';await refresh();alert('Expense saved.')}
+async function deleteExpense(id){if(!confirm('Delete this expense?'))return;const {error}=await db.from('expenses').delete().eq('id',id).eq('business_id',ownerId());if(error){alert(error.message);return}await refresh()}
+function receipt(id){const s=sales.find(x=>x.id===id);if(!s)return;const item=(window.saleItems||[]).find(i=>i.sale_id===id);const w=window.open('','_blank');if(!w){alert('Allow pop-ups to print the receipt.');return}w.document.write(`<html><head><title>Receipt</title><style>body{font-family:Arial;padding:25px;max-width:420px;margin:auto}h2,p{text-align:center}hr{border:1px dashed}</style></head><body><h2>${esc(business.business_name)}</h2><p>SALES RECEIPT</p><hr><p>Date: ${esc(saleDate(s))}</p><p>Customer: ${esc(s.customers?.customer_name||'Walk-in')}</p><p>Product: ${esc(item?.product_name||'Item')}</p><p>Quantity: ${item?.quantity||0}</p><p>Total: ${money(s.total_amount)}</p><p>Paid: ${money(paidFor(s))}</p><p>Balance: ${money(balance(s))}</p><hr><p>Thank you for your purchase!</p></body></html>`);w.document.close();w.print()}
+function render(){
+ const total=sales.reduce((a,s)=>a+Number(s.total_amount),0),paid=payments.reduce((a,p)=>a+Number(p.amount),0),debt=sales.reduce((a,s)=>a+balance(s),0),profit=sales.reduce((a,s)=>a+Number(s.total_amount)-totalCost(s),0),expenseTotal=expenses.reduce((a,e)=>a+Number(e.amount),0);
+ $('mSales').textContent=money(total);$('mPaid').textContent=money(paid);$('mDebt').textContent=money(debt);$('mProfit').textContent=money(profit);$('mExpenses').textContent=money(expenseTotal);$('mNet').textContent=money(profit-expenseTotal);
+ $('stockRows').innerHTML=products.map(p=>`<tr><td>${esc(p.product_name)}</td><td>${p.quantity}${p.quantity<=(p.alert_level??2)?' <span class="pill">Low stock</span>':''}</td><td>${money(p.cost_price)}</td><td>${money(p.selling_price)}</td><td>${money(p.quantity*p.cost_price)}</td><td><button onclick="editProduct('${p.id}')">Edit</button> <button class="danger" onclick="deleteProduct('${p.id}')">Delete</button></td></tr>`).join('')||'<tr><td colspan="6">No products yet. Add your first product above.</td></tr>';
+ $('sProduct').innerHTML='<option value="">Select a product</option>'+products.map(p=>`<option value="${p.id}">${esc(p.product_name)} (Stock: ${p.quantity})</option>`).join('');
+ $('sProduct').onchange=()=>{const p=products.find(x=>x.id===$('sProduct').value);if(p)$('sPrice').value=p.selling_price||''};
+ $('salesRows').innerHTML=sales.map(s=>{const i=(window.saleItems||[]).find(x=>x.sale_id===s.id);return `<tr><td>${esc(saleDate(s))}</td><td>${esc(s.customers?.customer_name||'Walk-in')}</td><td>${esc(i?.product_name||'')}</td><td>${i?.quantity||0}</td><td>${money(s.total_amount)}</td><td>${money(paidFor(s))}</td><td>${money(balance(s))}</td><td><button onclick="receipt('${s.id}')">Print</button></td></tr>`}).join('')||'<tr><td colspan="8">No sales recorded yet.</td></tr>';
+ const outstanding=sales.filter(s=>balance(s)>0);
+ $('debtRows').innerHTML=outstanding.map(s=>{const i=(window.saleItems||[]).find(x=>x.sale_id===s.id);return `<div class="card"><strong>${esc(i?.product_name||'Sale')}</strong><p>Sale date: ${esc(saleDate(s))} · Balance: <strong>${money(balance(s))}</strong></p><p>${overdue(s)?'<span class="pill">3-day reminder due</span>':'<span class="muted">Reminder due '+dueDate(saleDate(s))+'</span>'}</p><div class="actions"><button class="action" onclick="receivePayment('${s.id}')">Receive payment</button><button onclick="sendWhatsApp('${s.id}')">WhatsApp reminder</button><button onclick="sendSMS('${s.id}')">SMS reminder</button></div>${s.customer_phone?'':'<p class="error muted">No phone number was saved for this sale.</p>'}</div>`}).join('')||'<p>No outstanding customer debts.</p>';
+ const over=outstanding.filter(overdue);$('dashboardReminders').innerHTML=over.length?over.map(s=>`<p>Balance ${money(balance(s))} — <span class="pill">3 days elapsed</span></p>`).join(''):'No overdue reminders.';
+ $('expenseRows').innerHTML=expenses.map(e=>`<tr><td>${esc(e.expense_date)}</td><td>${esc(e.expense_name)}</td><td>Business expense</td><td>${money(e.amount)}</td><td><button class="danger" onclick="deleteExpense('${e.id}')">Delete</button></td></tr>`).join('')||'<tr><td colspan="5">No expenses recorded.</td></tr>';
+}
+function dueDate(d){const x=new Date(d+'T00:00:00');x.setDate(x.getDate()+3);return x.toISOString().slice(0,10)}
+function makeReport(){const period=$('rPeriod').value,match=d=>period==='all'||(period==='day'?d===today():d.slice(0,7)===today().slice(0,7));const ss=sales.filter(s=>match(saleDate(s))),ee=expenses.filter(e=>match(e.expense_date)),sum=(a,f)=>a.reduce((v,x)=>v+f(x),0),st=sum(ss,s=>Number(s.total_amount)),sp=sum(ss,s=>paidFor(s)),pr=sum(ss,s=>Number(s.total_amount)-totalCost(s)),ex=sum(ee,e=>Number(e.amount));$('reportOutput').innerHTML=`<h3>Report</h3><p>Total sales: <b>${money(st)}</b></p><p>Money received: <b>${money(sp)}</b></p><p>Customer debts: <b>${money(st-sp)}</b></p><p>Gross profit: <b>${money(pr)}</b></p><p>Expenses: <b>${money(ex)}</b></p><p>Net profit: <b>${money(pr-ex)}</b></p><button onclick="window.print()">Print report</button>`}
+db.auth.getSession().then(async({data,error})=>{if(error)return; if(data.session){user=data.session.user;try{await loadApp()}catch(e){msg(e.message)}}});
+db.auth.onAuthStateChange((_event,session)=>{if(session&&!business){user=session.user;setTimeout(()=>loadApp(),0)}});
+</script>
+</body></html>
